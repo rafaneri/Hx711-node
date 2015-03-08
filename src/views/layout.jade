@@ -1,0 +1,16 @@
+doctype html
+html
+  head
+    title= title
+    link(rel='stylesheet', href='/stylesheets/style.css')
+    script(type='text/javascript', src='/socket.io/socket.io.js').                                                                  script(type = "text/javascript").
+    script(type='text/javascript').
+      var io = io.connect()
+        // Send the ready event.
+      io.emit('scale')
+      io.on('scaleData', function(data) {
+        // 400*5/1024 = 1.95v
+        console.log(data.scale)
+      })
+  body
+    block content
