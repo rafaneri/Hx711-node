@@ -13,9 +13,9 @@ module.exports = function(app) {
     };
 
     function initScale(req, res, next) {
-        Hx711.init(1, 0);
-        Hx711.setScale(2837.15715964054);
-        Hx711.tare();
+        Hx711.init(0, 6);
+        //Hx711.setScale(2837.15715964054);
+        //Hx711.tare();
         setInterval(function() {
             readScale();
         }, 1000);

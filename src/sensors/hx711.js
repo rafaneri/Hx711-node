@@ -1,8 +1,7 @@
 /**
  * Created by rafaelneri on 07/03/15.
  */
-var Galileo = require("galileo-io");
-var board = new Galileo();
+var mraa = require('mraa');
 var utils = require('./utils');
 
 var Hx711 = {
@@ -13,18 +12,19 @@ var Hx711 = {
     _offset: null,
 
     init: function (pinDOut, pinSck, gain) {
-        dOut = new mraa.Aio(pinDOut);
-        sck = new mraa.Aio(pinSck);
-        
-        //dOut.dir(mraa.DIR_OUT);
-        //sck.dir(mraa.DIR_IN);
+        this.dOut = new mraa.Gpio(pinDOut);
+        this.sck = new mraa.Gpio(pinSck);
+
+        this.dOut.dir(mraa.DIR_OUT);
+        this.sck.dir(mraa.DIR_IN);
 
         if (typeof(gain)==='undefined') gain = 128;
         this.setGain(gain);
     },
 
     isReady: function () {
-        return dOut.read() == 0;
+        var out = this.dOut.read();
+        return out == 0;
     },
 
     setGain: function (gain) {
@@ -37,7 +37,7 @@ var Hx711 = {
             _gain = 2;
         }
 
-        sck.write(0);
+        this.sck.write(0);
 
         this.read();
     },
@@ -50,15 +50,16 @@ var Hx711 = {
         for(var j = 3; j>0; j--)
         {
             for(var i = 8; i>0; i--){
-                sck.write(1);
-                data[j] = utils.bitWrite(data[j], i, dOut.read());
-                sck.write(0);
+                this.sck.write(1);
+                data[j] = utils.bitWrite(data[j], i, this.dOut.read());
+                console.log('data[j]', data[j]);
+                this.sck.write(0);
             }
         }
 
         for (var i = 0; i < _gain; i++) {
-            sck.write(1);
-            sck.write(0);
+            this.sck.write(1);
+            this.sck.write(0);
         }
 
         data[3] ^= 0x80;
@@ -78,12 +79,12 @@ var Hx711 = {
 
     getValue: function (times) {
         if (typeof(times)==='undefined') times = 1;
-        return this.readAverage(times) - _offset;
+        return this.readAverage(times) - this._offset;
     },
 
     getUnits: function (times) {
-        if (typeof(times)==='undefined') times = 1;
-        return this.getValue(times) / _scale;
+        //if (typeof(times)==='undefined') times = 1;
+        return this.dOut.read();//this.getValue(times) / this._scale;
     },
 
     tare: function (times) {
@@ -103,12 +104,12 @@ var Hx711 = {
     },
 
     powerDown: function () {
-        sck.write(0);
-        sck.write(1);
+        this.sck.write(0);
+        this.sck.write(1);
     },
 
     powerUp: function () {
-        sck.write(0);
+        this.sck.write(0);
     }
 
 };
