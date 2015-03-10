@@ -2,114 +2,72 @@
  * Created by rafaelneri on 07/03/15.
  */
 var mraa = require('mraa');
-var utils = require('./utils');
 
 var Hx711 = {
-    dOut: null,
-    sck: null,
-    _gain: null,
-    _scale: null,
-    _offset: null,
+    data: null,
+    clock: null,
+    min: 4449.90, //lower input read
+    max: 291658.10, //most read input
+    minScale: 1.56, //less heavy object
+    maxScale: 101.8, //most heavy object
+    calibration: 0,
+    samples: 0,
+    samplesLog2: 0,
 
-    init: function (pinDOut, pinSck, gain) {
-        this.dOut = new mraa.Gpio(pinDOut);
-        this.sck = new mraa.Gpio(pinSck);
 
-        this.dOut.dir(mraa.DIR_OUT);
-        this.sck.dir(mraa.DIR_IN);
+    init: function (pinData, pinClock) {
+        if (typeof(pinData)==='undefined') pinData = 3;
+        if (typeof(pinClock)==='undefined') pinClock = 2;
 
-        if (typeof(gain)==='undefined') gain = 128;
-        this.setGain(gain);
-    },
+        this.data = new mraa.Gpio(pinData);
+        this.clock = new mraa.Gpio(pinClock);
 
-    isReady: function () {
-        var out = this.dOut.read();
-        return out == 0;
-    },
+        this.data.dir(mraa.DIR_IN);
+        this.clock.dir(mraa.DIR_OUT);
 
-    setGain: function (gain) {
-        if (typeof(gain)==='undefined') gain = 128;
-        if(gain == 128) {
-            _gain = 1;
-        } else if (gain == 64){
-            _gain = 3;
-        } else if(gain == 32){
-            _gain = 2;
-        }
-
-        this.sck.write(0);
-
-        this.read();
+        this.samplesLog2 = 8;
+        this.samples = 16;
     },
 
     read: function () {
-        while(!this.isReady());
+        var v = 0;
 
-        var data = [];
+        while (this.data.read() == 1);
 
-        for(var j = 3; j>0; j--)
+        for (var i=0; i<24; i++)
         {
-            for(var i = 8; i>0; i--){
-                this.sck.write(1);
-                data[j] = utils.bitWrite(data[j], i, this.dOut.read());
-                console.log('data[j]', data[j]);
-                this.sck.write(0);
-            }
+            this.clock.write(1);
+            v <<= 1;
+            v |= (this.data.read() == 1) ? 1 : 0;
+
+            this.clock.write(0);
         }
 
-        for (var i = 0; i < _gain; i++) {
-            this.sck.write(1);
-            this.sck.write(0);
-        }
+        this.clock.write(1);
+        this.clock.write(0);
 
-        data[3] ^= 0x80;
+        v |= (v & 0x00800000) ? 0xff000000 : 0x00000000;
 
-        return (data[3] << 16) | (data[2] << 8) | data[1];
+        return v;
     },
 
-    readAverage: function (times) {
-        if (typeof(times)==='undefined') times = 10;
-        var sum =0;
-        for(var i= 0; i < times; i++)
+    preciseReading: function () {
+        var v = 0;
+        for (var i=0; i<this.samples; i++)
         {
-            sum += this.read();
+            v += this.read();
         }
-        return sum/times;
+        return (v >> this.samplesLog2);
     },
 
-    getValue: function (times) {
-        if (typeof(times)==='undefined') times = 1;
-        return this.readAverage(times) - this._offset;
+    getValue: function() {
+        return this.executeScale(this.preciseReading() - this.calibration);
     },
 
-    getUnits: function (times) {
-        //if (typeof(times)==='undefined') times = 1;
-        return this.dOut.read();//this.getValue(times) / this._scale;
-    },
-
-    tare: function (times) {
-        if (typeof(times)==='undefined') times = 10;
-        var sum = this.readAverage(times);
-        this.setOffset(sum);
-    },
-
-    setScale: function (scale) {
-        if (typeof(scale)==='undefined') scale = 1;
-        this._scale = scale;
-    },
-
-    setOffset: function (offset) {
-        if (typeof(offset)==='undefined') offset = 0;
-        this._offset = offset;
-    },
-
-    powerDown: function () {
-        this.sck.write(0);
-        this.sck.write(1);
-    },
-
-    powerUp: function () {
-        this.sck.write(0);
+    executeScale: function(value)
+    {
+        var scaled = this.minScale + (value - this.min)/(this.max-this.min) * (this.maxScale - this.minScale);
+        return scaled;
     }
 
 };
