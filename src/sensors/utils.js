@@ -93,6 +93,25 @@ var utils = {
 // Returns the aquare root of x
     sqrt: function (x) {
         return (Math.sqrt(x));
+    },
+
+    delay: function (milliseconds) {
+        var start = new Date().getTime();
+        for (var i = 0; i < 1e7; i++) {
+            if ((new Date().getTime() - start) > milliseconds){
+                break;
+            }
+        }
+    },
+
+    extend: function (target) {
+        var sources = [].slice.call(arguments, 1);
+        sources.forEach(function (source) {
+            for (var prop in source) {
+                target[prop] = source[prop];
+            }
+        });
+        return target;
     }
 };
 

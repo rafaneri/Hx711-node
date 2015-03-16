@@ -1,0 +1,1 @@
+cmd_Release/obj.target/hx711.node := flock ./Release/linker.lock g++ -shared -pthread -rdynamic -m32 -lmraa -unistd=libc++  -Wl,-soname=hx711.node -o Release/obj.target/hx711.node -Wl,--start-group Release/obj.target/hx711/hx711.o Release/obj.target/hx711/HX711.o -Wl,--end-group 

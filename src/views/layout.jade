@@ -6,11 +6,21 @@ html
     script(type='text/javascript', src='/socket.io/socket.io.js').                                                                  script(type = "text/javascript").
     script(type='text/javascript').
       var io = io.connect()
+      var waitingScaleResult = false;
         // Send the ready event.
-      io.emit('scale')
+
+      function getScale()
+      {
+        if(!waitingScaleResult){
+          io.emit('scale');
+          waitingScaleResult = true
+        }
+      }
+
       io.on('scaleData', function(data) {
         // 400*5/1024 = 1.95v
-        console.log(data.scale)
+        document.getElementById('scale').innerText = data.scale
+        waitingScaleResult = false
       })
   body
     block content

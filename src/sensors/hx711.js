@@ -1,72 +1,54 @@
 /**
  * Created by rafaelneri on 07/03/15.
  */
-var mraa = require('mraa');
+var utils = require('./utils');
+var hx711 = require('../build/Release/hx711');
 
 var Hx711 = {
-    data: null,
-    clock: null,
-    min: 4449.90, //lower input read
-    max: 291658.10, //most read input
-    minScale: 1.56, //less heavy object
-    maxScale: 101.8, //most heavy object
-    calibration: 0,
-    samples: 0,
-    samplesLog2: 0,
 
+    default:{
+        samples: 1,
+        min: 9353611.62, //lower input read
+        max: 9645293.81, //most read input
+        minScale: 0, //less heavy object
+        maxScale: 101.8 //most heavy object
+    },
 
-    init: function (pinData, pinClock) {
-        if (typeof(pinData)==='undefined') pinData = 3;
-        if (typeof(pinClock)==='undefined') pinClock = 2;
+    init: function (config) {
+        this.default = utils.extend({}, this.default, config);
 
-        this.data = new mraa.Gpio(pinData);
-        this.clock = new mraa.Gpio(pinClock);
+        if (typeof(this.default.scale)==='undefined') {
+            this.default.scale = new hx711.HX711(3, 2);
+        };
 
-        this.data.dir(mraa.DIR_IN);
-        this.clock.dir(mraa.DIR_OUT);
-
-        this.samplesLog2 = 8;
-        this.samples = 16;
+        return this;
     },
 
     read: function () {
-        var v = 0;
-
-        while (this.data.read() == 1);
-
-        for (var i=0; i<24; i++)
-        {
-            this.clock.write(1);
-            v <<= 1;
-            v |= (this.data.read() == 1) ? 1 : 0;
-
-            this.clock.write(0);
-        }
-
-        this.clock.write(1);
-        this.clock.write(0);
-
-        v |= (v & 0x00800000) ? 0xff000000 : 0x00000000;
-
-        return v;
+        return this.default.scale.getValue();
     },
 
-    preciseReading: function () {
+    preciseReading: function (samples) {
+        if (typeof(samples)==='undefined') samples = this.default.samples;
+
         var v = 0;
-        for (var i=0; i<this.samples; i++)
+        for (var i=0; i<samples; i++)
         {
             v += this.read();
         }
-        return (v >> this.samplesLog2);
+        return v/samples;
     },
 
-    getValue: function() {
-        return this.executeScale(this.preciseReading() - this.calibration);
+    getValue: function(samples) {
+        if (typeof(samples)==='undefined') samples = this.default.samples;
+
+        var t = this.preciseReading(samples);
+        return this.executeScale(t);
     },
 
     executeScale: function(value)
     {
-        var scaled = this.minScale + (value - this.min)/(this.max-this.min) * (this.maxScale - this.minScale);
+        var scaled = this.default.minScale + (value - this.default.min)/(this.default.max-this.default.min) * (this.default.maxScale - this.default.minScale);
         return scaled;
     }
 
