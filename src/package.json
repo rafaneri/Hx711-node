@@ -13,7 +13,7 @@
     "express.io": "^1.1.13",
     "galileo-io": "^0.8.1",
     "jade": "~1.9.2",
-    "morgan": "~1.5.1",
+    "morgan": ">=1.9.1",
     "serve-favicon": "~2.2.0"
   }
 }
